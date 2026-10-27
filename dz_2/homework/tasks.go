@@ -16,7 +16,7 @@ func longestPrefix(words []string) string {
 	for i, cur := range start {
 		for _, o := range words[1:] {
 			other := []rune(o)
-			if len(o) <= i || other[i] != cur {
+			if len(other) <= i || other[i] != cur {
 				return string(start[:i])
 			}
 		}
