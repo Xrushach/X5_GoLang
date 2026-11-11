@@ -1,4 +1,4 @@
-module example.com/lesson8
+module example.com/lesson8-practice
 
 go 1.22
 
