@@ -1,0 +1,58 @@
+@base = http://127.0.0.1:8080
+
+### 200: приложение отвечает
+GET {{base}}/health
+
+### 201: создание заказа (после старта первый ID равен 1)
+POST {{base}}/orders
+Content-Type: application/json
+
+{"customer":"Анна"}
+
+### 200: чтение созданного заказа
+GET {{base}}/orders/1
+
+### 404: неизвестный заказ
+GET {{base}}/orders/999
+
+### 400: неверный ID
+GET {{base}}/orders/abc
+
+### 400: пустое имя
+POST {{base}}/orders
+Content-Type: application/json
+
+{"customer":" "}
+
+### 400: неверный тип
+POST {{base}}/orders
+Content-Type: application/json
+
+{"customer":42}
+
+### 400: два JSON-значения
+POST {{base}}/orders
+Content-Type: application/json
+
+{"customer":"Анна"} {}
+
+### 400: неизвестное поле
+POST {{base}}/orders
+Content-Type: application/json
+
+{"customer":"Анна","status":"paid"}
+
+### 415: неверный Content-Type
+POST {{base}}/orders
+Content-Type: text/plain
+
+{"customer":"Анна"}
+
+### 405: метод не поддерживается, проверить Allow
+DELETE {{base}}/orders/1
+
+### HEAD: статус и заголовки, без тела по сети
+HEAD {{base}}/health
+
+### 500: только при запуске с -demo
+GET {{base}}/demo/panic

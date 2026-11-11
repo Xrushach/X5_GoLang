@@ -2,14 +2,17 @@ package handler
 
 import (
 	"example/internal/model"
-	"example/internal/service"
 )
 
-type Handler struct {
-	orders *service.Service
+type createService interface {
+	Create(customer string) (model.Order, error)
 }
 
-func NewHandler(orders *service.Service) *Handler {
+type Handler struct {
+	orders createService
+}
+
+func NewHandler(orders createService) *Handler {
 	return &Handler{orders: orders}
 }
 
