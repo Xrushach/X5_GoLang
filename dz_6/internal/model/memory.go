@@ -1,4 +1,4 @@
-package main
+package model
 
 import "sync"
 
@@ -24,6 +24,7 @@ func (s *Store) Create(customer string) Order {
 	s.nextID++
 	return order
 }
+
 func (s *Store) ByID(id int) (Order, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
