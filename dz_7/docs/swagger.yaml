@@ -3,7 +3,7 @@ definitions:
   httpapi.CreateOrderRequest:
     properties:
       customer:
-        example: Алиса
+        example: Bob
         minLength: 1
         type: string
     required:
@@ -24,7 +24,7 @@ definitions:
   httpapi.OrderResponse:
     properties:
       customer:
-        example: Алиса
+        example: Bob
         type: string
       id:
         example: 1

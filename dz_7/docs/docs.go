@@ -206,7 +206,7 @@ const docTemplate = `{
                 "customer": {
                     "type": "string",
                     "minLength": 1,
-                    "example": "Алиса"
+                    "example": "Bob"
                 }
             }
         },
@@ -237,7 +237,7 @@ const docTemplate = `{
             "properties": {
                 "customer": {
                     "type": "string",
-                    "example": "Алиса"
+                    "example": "Bob"
                 },
                 "id": {
                     "type": "integer",

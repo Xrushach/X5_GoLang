@@ -2,14 +2,13 @@ package httpapi
 
 import "example.com/lesson9practice/internal/model"
 
-// CreateOrderRequest отделяет входной контракт от внутренней модели.
 type CreateOrderRequest struct {
-	Customer string `json:"customer" example:"Алиса" minLength:"1" binding:"required"`
+	Customer string `json:"customer" example:"Bob" minLength:"1" binding:"required"`
 }
 
 type OrderResponse struct {
 	ID       int    `json:"id" example:"1" minimum:"1" binding:"required"`
-	Customer string `json:"customer" example:"Алиса" binding:"required"`
+	Customer string `json:"customer" example:"Bob" binding:"required"`
 	Status   string `json:"status" example:"new" enums:"new,cancelled" binding:"required"`
 }
 

@@ -39,3 +39,54 @@ func TestProcessFiles(t *testing.T) {
 		t.Fatalf("не получены результаты: %v", want)
 	}
 }
+
+func TestProcessFilesWithMissing(t *testing.T) {
+	okPath := filepath.Join("..", "testdata", "orders-a.txt")
+	badPath := filepath.Join("..", "testdata", "missing.txt")
+
+	var gotOK, gotErr bool
+	count := 0
+	for got := range ProcessFiles([]string{okPath, badPath}, 2) {
+		count++
+		if got.Path == okPath {
+			if got.Err != nil || got.Lines != 3 || got.Words != 5 {
+				t.Fatalf("для %q получили %+v", got.Path, got)
+			}
+			gotOK = true
+		} else if got.Path == badPath {
+			if got.Err == nil {
+				t.Fatalf("для %q ожидали ошибку", got.Path)
+			}
+			gotErr = true
+		} else {
+			t.Fatalf("лишний результат для %q", got.Path)
+		}
+	}
+	if count != 2 || !gotOK || !gotErr {
+		t.Fatalf("count=%d gotOK=%v gotErr=%v", count, gotOK, gotErr)
+	}
+}
+
+func TestProcessFilesEmpty(t *testing.T) {
+	count := 0
+	for range ProcessFiles(nil, 2) {
+		count++
+	}
+	if count != 0 {
+		t.Fatalf("получили %d результатов, ожидали 0", count)
+	}
+}
+
+func TestProcessFilesDuplicateAndZeroWorkers(t *testing.T) {
+	path := filepath.Join("..", "testdata", "orders-a.txt")
+	count := 0
+	for got := range ProcessFiles([]string{path, path}, 0) {
+		if got.Err != nil || got.Path != path || got.Lines != 3 || got.Words != 5 {
+			t.Fatalf("неожиданный результат: %+v", got)
+		}
+		count++
+	}
+	if count != 2 {
+		t.Fatalf("получили %d результатов, ожидали 2", count)
+	}
+}

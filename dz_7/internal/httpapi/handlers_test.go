@@ -31,7 +31,7 @@ func request(handler http.Handler, method, path, body, contentType string) *http
 
 func TestCreateAndReadOrder(t *testing.T) {
 	handler := newHandler()
-	created := request(handler, "POST", "/api/v1/orders", `{"customer":"  Алиса  "}`, "application/json")
+	created := request(handler, "POST", "/api/v1/orders", `{"customer":"  Bob  "}`, "application/json")
 	if created.Code != 201 {
 		t.Fatalf("create status=%d body=%s", created.Code, created.Body)
 	}
@@ -42,14 +42,14 @@ func TestCreateAndReadOrder(t *testing.T) {
 	if err := json.Unmarshal(created.Body.Bytes(), &order); err != nil {
 		t.Fatal(err)
 	}
-	if order.ID != 1 || order.Customer != "Алиса" || order.Status != "new" {
+	if order.ID != 1 || order.Customer != "Bob" || order.Status != "new" {
 		t.Fatalf("unexpected order: %+v", order)
 	}
 	read := request(handler, "GET", created.Header().Get("Location"), "", "")
 	if read.Code != 200 || read.Body.String() != created.Body.String() {
 		t.Fatalf("read status=%d body=%s", read.Code, read.Body)
 	}
-	again := request(handler, "POST", "/api/v1/orders", `{"customer":"Алиса"}`, "application/json")
+	again := request(handler, "POST", "/api/v1/orders", `{"customer":"Bob"}`, "application/json")
 	if again.Code != 201 || again.Header().Get("Location") != "/api/v1/orders/2" {
 		t.Fatalf("second create status=%d Location=%q", again.Code, again.Header().Get("Location"))
 	}
@@ -69,9 +69,9 @@ func TestErrorsKeepJSONContract(t *testing.T) {
 		{"empty customer", "POST", "/api/v1/orders", `{"customer":" "}`, "application/json", 400, "VALIDATION_ERROR"},
 		{"null body", "POST", "/api/v1/orders", `null`, "application/json", 400, "INVALID_JSON"},
 		{"wrong type", "POST", "/api/v1/orders", `{"customer":42}`, "application/json", 400, "INVALID_JSON"},
-		{"unknown field", "POST", "/api/v1/orders", `{"customer":"Алиса","status":"paid"}`, "application/json", 400, "INVALID_JSON"},
-		{"second JSON", "POST", "/api/v1/orders", `{"customer":"Алиса"} {}`, "application/json", 400, "INVALID_JSON"},
-		{"wrong media type", "POST", "/api/v1/orders", `{"customer":"Алиса"}`, "text/plain", 415, "UNSUPPORTED_MEDIA_TYPE"},
+		{"unknown field", "POST", "/api/v1/orders", `{"customer":"Bob","status":"paid"}`, "application/json", 400, "INVALID_JSON"},
+		{"second JSON", "POST", "/api/v1/orders", `{"customer":"Bob"} {}`, "application/json", 400, "INVALID_JSON"},
+		{"wrong media type", "POST", "/api/v1/orders", `{"customer":"Bob"}`, "text/plain", 415, "UNSUPPORTED_MEDIA_TYPE"},
 		{"large body", "POST", "/api/v1/orders", `{"customer":"` + strings.Repeat("a", 1100) + `"}`, "application/json", 413, "BODY_TOO_LARGE"},
 	}
 	for _, tt := range tests {
@@ -123,7 +123,7 @@ func TestListOrdersEmpty(t *testing.T) {
 
 func TestListOrdersPagination(t *testing.T) {
 	handler := newHandler()
-	for _, name := range []string{"Алиса", "Боб", "Ева"} {
+	for _, name := range []string{"Bob", "Bob2", "Bob3"} {
 		w := request(handler, "POST", "/api/v1/orders", `{"customer":"`+name+`"}`, "application/json")
 		if w.Code != 201 {
 			t.Fatalf("create status=%d", w.Code)
