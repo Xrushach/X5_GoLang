@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"sort"
 	"sync"
 
 	"example.com/lesson9practice/internal/model"
@@ -25,6 +26,7 @@ func (m *Memory) Create(customer string) (model.Order, error) {
 	m.nextID++
 	return order, nil
 }
+
 func (m *Memory) ByID(id int) (model.Order, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -33,4 +35,17 @@ func (m *Memory) ByID(id int) (model.Order, error) {
 		return model.Order{}, ErrNotFound
 	}
 	return order, nil
+}
+
+func (m *Memory) List() ([]model.Order, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	res := make([]model.Order, 0, len(m.orders))
+	for _, order := range m.orders {
+		res = append(res, order)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].ID < res[j].ID
+	})
+	return res, nil
 }

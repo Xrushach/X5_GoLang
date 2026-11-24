@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -47,7 +49,6 @@ func TestCreateAndReadOrder(t *testing.T) {
 	if read.Code != 200 || read.Body.String() != created.Body.String() {
 		t.Fatalf("read status=%d body=%s", read.Code, read.Body)
 	}
-	// Повторный заказ одного клиента разрешён: имя не является уникальным ключом.
 	again := request(handler, "POST", "/api/v1/orders", `{"customer":"Алиса"}`, "application/json")
 	if again.Code != 201 || again.Header().Get("Location") != "/api/v1/orders/2" {
 		t.Fatalf("second create status=%d Location=%q", again.Code, again.Header().Get("Location"))
@@ -110,5 +111,99 @@ func TestStatus(t *testing.T) {
 	w := request(newHandler(), "GET", "/api/v1/status", "", "")
 	if w.Code != 200 || strings.TrimSpace(w.Body.String()) != `{"status":"ok"}` {
 		t.Fatalf("status=%d body=%s", w.Code, w.Body)
+	}
+}
+
+func TestListOrdersEmpty(t *testing.T) {
+	w := request(newHandler(), "GET", "/api/v1/orders", "", "")
+	if w.Code != 200 || strings.TrimSpace(w.Body.String()) != "[]" {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body)
+	}
+}
+
+func TestListOrdersPagination(t *testing.T) {
+	handler := newHandler()
+	for _, name := range []string{"Алиса", "Боб", "Ева"} {
+		w := request(handler, "POST", "/api/v1/orders", `{"customer":"`+name+`"}`, "application/json")
+		if w.Code != 201 {
+			t.Fatalf("create status=%d", w.Code)
+		}
+	}
+
+	cases := []struct {
+		name    string
+		path    string
+		wantIDs []int
+	}{
+		{"all", "/api/v1/orders", []int{1, 2, 3}},
+		{"second only", "/api/v1/orders?limit=1&offset=1", []int{2}},
+		{"first two", "/api/v1/orders?limit=2&offset=0", []int{1, 2}},
+		{"last page", "/api/v1/orders?limit=2&offset=2", []int{3}},
+		{"out of range", "/api/v1/orders?offset=10", []int{}},
+		{"huge offset", "/api/v1/orders?limit=20&offset=" + strconv.Itoa(math.MaxInt), []int{}},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			w := request(handler, "GET", tt.path, "", "")
+			if w.Code != 200 {
+				t.Fatalf("status=%d body=%s", w.Code, w.Body)
+			}
+			if got := w.Header().Get("Content-Type"); got != "application/json" {
+				t.Fatalf("Content-Type=%q", got)
+			}
+			if len(tt.wantIDs) == 0 && strings.TrimSpace(w.Body.String()) != "[]" {
+				t.Fatalf("body=%s, want []", w.Body)
+			}
+			var got []OrderResponse
+			if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+				t.Fatal(err)
+			}
+			if len(got) != len(tt.wantIDs) {
+				t.Fatalf("len=%d want=%d", len(got), len(tt.wantIDs))
+			}
+			for i, id := range tt.wantIDs {
+				if got[i].ID != id {
+					t.Fatalf("got[%d].ID=%d want=%d", i, got[i].ID, id)
+				}
+			}
+		})
+	}
+}
+
+func TestListOrdersInvalidQuery(t *testing.T) {
+	paths := []string{
+		"/api/v1/orders?limit=",
+		"/api/v1/orders?offset=",
+		"/api/v1/orders?limit=abc",
+		"/api/v1/orders?offset=abc",
+		"/api/v1/orders?limit=-1",
+		"/api/v1/orders?offset=-1",
+		"/api/v1/orders?limit=+1",
+		"/api/v1/orders?offset=+1",
+		"/api/v1/orders?limit=0",
+		"/api/v1/orders?limit=101",
+		"/api/v1/orders?limit=99999999999999999999999",
+		"/api/v1/orders?offset=99999999999999999999999",
+		"/api/v1/orders?limit=1&limit=2",
+		"/api/v1/orders?offset=0&offset=1",
+		"/api/v1/orders?foo=bar",
+	}
+
+	handler := newHandler()
+	for _, path := range paths {
+		t.Run(path, func(t *testing.T) {
+			w := request(handler, "GET", path, "", "")
+			if w.Code != 400 {
+				t.Fatalf("status=%d body=%s", w.Code, w.Body)
+			}
+			var out ErrorResponse
+			if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+				t.Fatal(err)
+			}
+			if out.Code != "INVALID_QUERY" || out.Error == "" {
+				t.Fatalf("unexpected error: %+v", out)
+			}
+		})
 	}
 }
