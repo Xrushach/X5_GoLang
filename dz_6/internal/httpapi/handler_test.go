@@ -156,4 +156,29 @@ func TestRecovery(t *testing.T) {
 	if ct := r.Header().Get("Content-Type"); ct != "application/json" {
 		t.Fatalf("Content-Type=%q", ct)
 	}
+
+	reqID := r.Header().Get("X-Request-ID")
+	if reqID == "" {
+		t.Fatal("empty X-Request-ID")
+	}
+	if strings.Contains(buf.String(), "Panic") {
+		t.Fatalf("panic leaked to logs: %s", buf.String())
+	}
+
+	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("logs=%q", buf.String())
+	}
+
+	var access struct {
+		Msg       string `json:"msg"`
+		RequestID string `json:"request_id"`
+		Status    int    `json:"status"`
+	}
+	if err := json.Unmarshal([]byte(lines[1]), &access); err != nil {
+		t.Fatal(err)
+	}
+	if access.Msg != "http_request" || access.Status != 500 || access.RequestID != reqID {
+		t.Fatalf("access log=%+v, want status=500 request_id=%q", access, reqID)
+	}
 }

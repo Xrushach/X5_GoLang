@@ -14,7 +14,7 @@ func TestValidatePercent(t *testing.T) {
 		want    error
 	}{
 		{"Zero", 0, nil},
-		{"Five", 5, nil},
+		{"Ten", 10, nil},
 		{"Hundred", 100, nil},
 		{"Negative", -1, ErrInvalidPercent},
 		{"Overflow", 101, ErrInvalidPercent},
@@ -44,7 +44,8 @@ func TestApply(t *testing.T) {
 		{"0'%' discount", 1000, 0, 1000, nil},
 		{"100% discount", 1000, 100, 0, nil},
 		{"Negative price", -1, 30, 0, ErrNegativePrice},
-		{"Bad discount", 1000, 101, 0, ErrInvalidPercent},
+		{"Negative discount", 1000, -1, 0, ErrInvalidPercent},
+		{"OVF discount", 1000, 101, 0, ErrInvalidPercent},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -52,6 +53,7 @@ func TestApply(t *testing.T) {
 			got, err := Apply(c.price, c.percent)
 			if c.want != nil {
 				assert.ErrorIs(t, err, c.want)
+				assert.Zero(t, got)
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, c.priceAfter, got)
@@ -72,6 +74,7 @@ func TestFinalPrice(t *testing.T) {
 		{"Casual items", []Item{{100, 15}, {1000, 70}}, 385, nil},
 		{"Full discount", []Item{{100, 100}}, 0, nil},
 		{"Negative price", []Item{{-1, 10}}, 0, ErrNegativePrice},
+		{"Negative price after valid", []Item{{1000, 10}, {-150, 20}}, 0, ErrNegativePrice},
 		{"Negative percent", []Item{{100, -10}}, 0, ErrInvalidPercent},
 		{"Overflow percent", []Item{{1000, 101}}, 0, ErrInvalidPercent},
 		{"Invalid percent after valid", []Item{{1000, 10}, {150, -20}}, 0, ErrInvalidPercent},

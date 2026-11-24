@@ -27,8 +27,8 @@ func Recovery(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if value := recover(); value != nil {
-				slog.Error("panic recovery", "request_id", requestIDFromContext(r.Context()), "panic", value)
-				writeJSON(w, 500, map[string]string{"error": "Internal server error"})
+				slog.Error("panic recovery", "request_id", requestIDFromContext(r.Context()))
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Internal server error"})
 			}
 		}()
 		next.ServeHTTP(w, r)
